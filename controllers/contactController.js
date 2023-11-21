@@ -1,5 +1,14 @@
 const Contact = require("../models/contacts");
 
+const Joi = require("joi");
+
+const updateStatusSchema = Joi.object({
+  name: Joi.string().optional(),
+  email: Joi.string().email().optional(),
+  phone: Joi.string().optional(),
+  favorite: Joi.boolean().required().error(new Error("Missing field favorite")),
+});
+
 async function listContacts(req, res, next) {
   try {
     const contacts = await Contact.find().exec();
@@ -44,17 +53,23 @@ async function addContact(req, res, next) {
 async function updateStatusContact(req, res, next) {
   const { contactId } = req.params;
 
-  const contact = {
-    name: req.body.name,
-    email: req.body.email,
-    phone: req.body.phone,
-    favorite: req.body.favorite,
-  };
-  console.log(req.body);
-  if (!Object.keys(req.body).length) {
-    return res.status(404).json({ message: "Missing field favorite" });
-  }
   try {
+    const validationResult = updateStatusSchema.validate(req.body, {
+      abortEarly: false,
+    });
+
+    if (validationResult.error) {
+      const errorMessage = validationResult.error.message;
+      return res.status(400).json({ message: errorMessage });
+    }
+
+    const contact = {
+      name: req.body.name,
+      email: req.body.email,
+      phone: req.body.phone,
+      favorite: req.body.favorite,
+    };
+
     const result = await Contact.findByIdAndUpdate(contactId, contact, {
       new: true,
     });
