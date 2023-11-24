@@ -29,7 +29,7 @@ async function register(req, res, next) {
     const newUser = await User.create({ email, password: passwordHash });
 
     res.status(201).send({
-      message: "Registration successful!",
+      message: "Registration successfully!",
       user: { email: newUser.email, subscription: newUser.subscription },
     });
   } catch (error) {
