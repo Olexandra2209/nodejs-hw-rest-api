@@ -4,7 +4,7 @@ const router = express.Router();
 const jsonParser = express.json();
 
 const ContactController = require("../../controllers/contactController");
-const { auth } = require("../../middleware/auth");
+const auth = require("../../middleware/auth");
 
 router.get("/", auth, ContactController.listContacts);
 

@@ -4,7 +4,7 @@ const AuthController = require("../../controllers/auth");
 
 const router = express.Router();
 
-const { auth } = require("../../middleware/auth");
+const auth = require("../../middleware/auth");
 
 const jsonParser = express.json();
 
