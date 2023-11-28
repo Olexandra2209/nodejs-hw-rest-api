@@ -1,3 +1,5 @@
+const path = require("path");
+
 const express = require("express");
 const logger = require("morgan");
 const cors = require("cors");
@@ -14,6 +16,8 @@ const authRouter = require("./routes/api/auth");
 app.use(logger(formatsLogger));
 app.use(cors());
 app.use(express.json());
+
+app.use("/avatars", express.static(path.join(__dirname, "public", "avatars")));
 
 app.use("/users", authRouter);
 

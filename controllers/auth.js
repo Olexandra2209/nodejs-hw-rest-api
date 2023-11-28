@@ -1,16 +1,13 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/users");
-const Joi = require("joi");
+const gravatar = require("gravatar");
 
-const validationSchema = Joi.object({
-  email: Joi.string().email().required(),
-  password: Joi.string().min(6).required(),
-});
+const { registrationSchema } = require("../utils/validation/validation");
 
 async function register(req, res, next) {
   try {
-    const { error } = validationSchema.validate(req.body);
+    const { error } = registrationSchema.validate(req.body);
 
     if (error) {
       return res.status(400).json({ message: error.details[0].message });
@@ -25,11 +22,20 @@ async function register(req, res, next) {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-
-    await User.create({ email, subscription, password: passwordHash });
+    const avatarURL = gravatar.url(email);
+    const newUser = await User.create({
+      email,
+      subscription,
+      password: passwordHash,
+      avatarURL,
+    });
 
     res.status(201).json({
-      user: { email, subscription },
+      user: {
+        email: newUser.email,
+        subscription: newUser.subscription,
+        avatarURL: newUser.avatarURL,
+      },
     });
   } catch (error) {
     next(error);
