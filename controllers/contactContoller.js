@@ -1,12 +1,5 @@
 const Contact = require("../models/contacts");
-const Joi = require("joi");
-
-const updateStatusSchema = Joi.object({
-  name: Joi.string().optional(),
-  email: Joi.string().email().optional(),
-  phone: Joi.string().optional(),
-  favorite: Joi.boolean().required().error(new Error("Missing field favorite")),
-});
+const { updateStatusSchema } = require("../utils/validation/validation");
 
 async function listContacts(req, res, next) {
   try {
