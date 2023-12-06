@@ -16,6 +16,15 @@ const userSchema = new mongoose.Schema({
     default: "starter",
   },
   token: String,
+  avatarURL: String,
+  verify: {
+    type: Boolean,
+    default: false,
+  },
+  verificationToken: {
+    type: String,
+    required: [true, "Verify token is required"],
+  },
 });
 
 module.exports = mongoose.model("User", userSchema);
