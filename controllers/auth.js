@@ -1,16 +1,14 @@
+const crypto = require("node:crypto");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/users");
-const Joi = require("joi");
-
-const validationSchema = Joi.object({
-  email: Joi.string().email().required(),
-  password: Joi.string().min(6).required(),
-});
+const gravatar = require("gravatar");
+const sendEmail = require("../utils/nodemailer/nodemailer");
+const { registrationSchema } = require("../utils/validation/validation");
 
 async function register(req, res, next) {
   try {
-    const { error } = validationSchema.validate(req.body);
+    const { error } = registrationSchema.validate(req.body);
 
     if (error) {
       return res.status(400).json({ message: error.details[0].message });
@@ -25,11 +23,30 @@ async function register(req, res, next) {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const avatarURL = gravatar.url(email);
+    const verificationToken = crypto.randomUUID();
 
-    await User.create({ email, subscription, password: passwordHash });
+    await sendEmail({
+      to: email,
+      subject: "Welcome to your contacts",
+      html: `To confirm your registration please click on the <a href="http://localhost:3000/users/verify/${verificationToken}">link</a>`,
+      text: `To confirm your registration please open the link http://localhost:3000/users/verify/${verificationToken}`,
+    });
+
+    const newUser = await User.create({
+      email,
+      subscription,
+      verificationToken,
+      password: passwordHash,
+      avatarURL,
+    });
 
     res.status(201).json({
-      user: { email, subscription },
+      user: {
+        email: newUser.email,
+        subscription: newUser.subscription,
+        avatarURL: newUser.avatarURL,
+      },
     });
   } catch (error) {
     next(error);
@@ -107,4 +124,58 @@ async function current(req, res, next) {
   }
 }
 
-module.exports = { register, login, logout, current };
+async function verify(req, res, next) {
+  const { verificationToken } = req.params;
+  console.log(req.params);
+
+  try {
+    const user = await User.findOne({
+      verificationToken: verificationToken,
+    }).exec();
+
+    if (user === null) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    await User.findByIdAndUpdate(user._id, {
+      verify: true,
+      verificationToken: null,
+    });
+
+    res.status(200).json({ message: "Verification successful" });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function verifyResend(req, res, next) {
+  const { email } = req.body;
+
+  try {
+    if (!email) {
+      return res.status(400).json({ message: "Missing required field email" });
+    }
+    const user = await User.findOne({
+      email: email,
+    }).exec();
+    console.log(user);
+
+    if (user.verify === true) {
+      return res
+        .status(400)
+        .json({ message: "Verification has already been passed" });
+    }
+    await sendEmail({
+      to: email,
+      subject: "Welcome to your contacts",
+      html: `To confirm your registration please click on the <a href="http://localhost:3000/users/verify/${user.verificationToken}">link</a>`,
+      text: `To confirm your registration please open the link http://localhost:3000/users/verify/${user.verificationToken}`,
+    });
+
+    res.status(200).json({ message: "Verification email sent" });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = { register, login, logout, current, verify, verifyResend };
